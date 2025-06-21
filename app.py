@@ -105,7 +105,7 @@ def speak():
 
         else:
             # Azure environment — return audio stream
-            audio_config = speechsdk.audio.AudioOutputConfig(use_default_output_device=True)
+            audio_config = speechsdk.audio.AudioOutputConfig(use_default_output_device=False)
             synthesizer = speechsdk.SpeechSynthesizer(
                 speech_config=speech_config,
                 audio_config=audio_config
