@@ -117,6 +117,19 @@
         button:hover {
             background: #c30000;
         }
+        #welcome-button {
+            margin: 1rem auto;
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            border-radius: 2rem;
+            background: #e60000;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #welcome-button:hover {
+            background: #c30000;
+        }
     </style>
 </head>
 <body>
@@ -125,9 +138,8 @@
     <h2>🤖 Voice Chat Assistant</h2>
 
     <div id="chat-history">
-        <div class="chat-box AI">
-            {{ welcome_message }}
-        </div>
+        <!-- Welcome message will be inserted here dynamically -->
+        <button id="welcome-button">🔊 Start Chat</button>
     </div>
 
     <form id="chat-form">
@@ -140,11 +152,13 @@
     const chatForm = document.getElementById("chat-form");
     const userInput = document.getElementById("user-input");
     const chatHistory = document.getElementById("chat-history");
+    const welcomeButton = document.getElementById("welcome-button");
 
-    window.addEventListener("DOMContentLoaded", () => {
+    welcomeButton.addEventListener("click", () => {
         const welcomeText = "{{ welcome_message }}";
+        appendMessage("AI", welcomeText);
         speakViaAzure(welcomeText);
-        scrollToBottom();
+        welcomeButton.style.display = "none";
     });
 
     chatForm.addEventListener("submit", async (e) => {
@@ -195,12 +209,13 @@
             const blob = await response.blob();
             const audioUrl = URL.createObjectURL(blob);
             const audio = new Audio(audioUrl);
-            audio.play();
+            audio.play().catch(err => {
+                console.warn("Autoplay blocked:", err);
+            });
         } catch (err) {
             console.error("❌ Speech playback error:", err);
         }
     }
 </script>
-
 </body>
 </html>
