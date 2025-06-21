@@ -54,11 +54,7 @@ def speak():
         </voice>
     </speak>
     """
-
     try:
-        # Determine if running locally
-        is_local = request.host.startswith("127.0.0.1") or "localhost" in request.host
-
         speech_config = speechsdk.SpeechConfig(
             subscription=AZURE_SPEECH_KEY,
             region=AZURE_SPEECH_REGION
@@ -66,41 +62,28 @@ def speak():
         speech_config.speech_synthesis_voice_name = "en-IN-NeerjaNeural"
         speech_config.speech_synthesis_language = "en-US"
 
-        if is_local:
-            # Local: use default speaker
-            audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=True)
-            synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
-            result = synthesizer.speak_ssml_async(ssml_text).get()
+        stream = speechsdk.audio.PullAudioOutputStream()
+        audio_config = speechsdk.audio.AudioOutputConfig(stream=stream)
+        synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
 
-            if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                return jsonify({"status": "success", "message": "Played locally via speaker"})
-            else:
-                return jsonify({"status": "error", "message": "Speech synthesis failed"}), 500
+        result = synthesizer.speak_ssml_async(ssml_text).get()
 
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            audio_stream = speechsdk.AudioDataStream(result)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
+                audio_stream.save_to_wav_file(temp_wav.name)
+                temp_wav.seek(0)
+                audio_bytes = temp_wav.read()
+
+            return send_file(
+                io.BytesIO(audio_bytes),
+                mimetype="audio/wav",
+                as_attachment=False,
+                download_name="speech.wav"
+            )
         else:
-            # Azure: return audio stream to frontend
-            stream = speechsdk.audio.PullAudioOutputStream()
-            audio_config = speechsdk.audio.AudioOutputConfig(stream=stream)
-            synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
-
-            result = synthesizer.speak_ssml_async(ssml_text).get()
-
-            if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                audio_stream = speechsdk.AudioDataStream(result)
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
-                    audio_stream.save_to_wav_file(temp_wav.name)
-                    temp_wav.seek(0)
-                    audio_bytes = temp_wav.read()
-
-                return send_file(
-                    io.BytesIO(audio_bytes),
-                    mimetype="audio/wav",
-                    as_attachment=False,
-                    download_name="speech.wav"
-                )
-            else:
-                return jsonify({"status": "error", "message": "Speech synthesis failed"}), 500
-            
+            return jsonify({"status": "error", "message": "Speech synthesis failed"}), 500       
+                    
     except Exception as e:
         print("❌ Speech error:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
