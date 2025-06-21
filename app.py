@@ -34,7 +34,7 @@ def get_speech_synthesizer():
     speech_config.speech_synthesis_language = "en-US"
 
     # No speaker device (important for Azure Web App)
-    audio_config = speechsdk.audio.AudioOutputConfig(use_default_output_device=False)
+    audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=False)
     return speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
 
 # Load answer using LlamaIndex + FAISS
@@ -105,7 +105,7 @@ def speak():
 
         else:
             # Azure environment — return audio stream
-            audio_config = speechsdk.audio.AudioOutputConfig(use_default_output_device=False)
+            audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=False)
             synthesizer = speechsdk.SpeechSynthesizer(
                 speech_config=speech_config,
                 audio_config=audio_config
