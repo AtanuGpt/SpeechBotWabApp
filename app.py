@@ -79,35 +79,31 @@ def speak():
 
         else:
             # Azure: return audio stream to frontend
-            print("Entering Azure speech")
-            
-            synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
+            stream = speechsdk.audio.PullAudioOutputStream()
+            audio_config = speechsdk.audio.AudioOutputConfig(stream=stream)
+            synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+
             result = synthesizer.speak_ssml_async(ssml_text).get()
 
             if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                stream = speechsdk.AudioDataStream(result)
+                audio_stream = speechsdk.AudioDataStream(result)
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
-                    stream.save_to_wav_file(temp_wav.name)
+                    audio_stream.save_to_wav_file(temp_wav.name)
                     temp_wav.seek(0)
                     audio_bytes = temp_wav.read()
 
-                audio_stream = io.BytesIO(audio_bytes)
-                audio_stream.seek(0)
-
                 return send_file(
-                    audio_stream,
+                    io.BytesIO(audio_bytes),
                     mimetype="audio/wav",
                     as_attachment=False,
                     download_name="speech.wav"
                 )
             else:
                 return jsonify({"status": "error", "message": "Speech synthesis failed"}), 500
-
+            
     except Exception as e:
         print("❌ Speech error:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
-
-# === HELPER ===
 
 def fetch_answer(question):
     try:
